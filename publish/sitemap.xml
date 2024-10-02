@@ -56,12 +56,6 @@
     </url>
   
     <url>
-      <loc>https://ecomplus-storefront.netlify.app/pages/privacidade</loc>
-      <changefreq>monthly</changefreq>
-      <priority>0.7</priority>
-    </url>
-  
-    <url>
       <loc>https://ecomplus-storefront.netlify.app/pages/sobre-nos</loc>
       <changefreq>monthly</changefreq>
       <priority>0.7</priority>
@@ -80,6 +74,12 @@
     </url>
   
     <url>
+      <loc>https://ecomplus-storefront.netlify.app/pages/privacidade</loc>
+      <changefreq>monthly</changefreq>
+      <priority>0.7</priority>
+    </url>
+  
+    <url>
       <loc>https://ecomplus-storefront.netlify.app/posts/esta-loja-e-um-pwa</loc>
       <changefreq>monthly</changefreq>
       <priority>0.7</priority>
@@ -92,6 +92,12 @@
     </url>
   
     <url>
+      <loc>https://ecomplus-storefront.netlify.app/blog</loc>
+      <changefreq>weekly</changefreq>
+      <priority>0.8</priority>
+    </url>
+  
+    <url>
       <loc>https://ecomplus-storefront.netlify.app/</loc>
       <changefreq>daily</changefreq>
       <priority>1</priority>
@@ -99,12 +105,6 @@
   
     <url>
       <loc>https://ecomplus-storefront.netlify.app/search</loc>
-      <changefreq>weekly</changefreq>
-      <priority>0.8</priority>
-    </url>
-  
-    <url>
-      <loc>https://ecomplus-storefront.netlify.app/blog</loc>
       <changefreq>weekly</changefreq>
       <priority>0.8</priority>
     </url>
