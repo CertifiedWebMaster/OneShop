@@ -1,4 +1,4 @@
-name: Build and deploy
+name: Build and deploy to Netlify
 
 on:
   push:
@@ -10,7 +10,6 @@ on:
       - 'package-lock.json'
       - '.ecomplus.cd.json'
       - '.netlify/**'
-      - '.github/build-and-deploy'
       - '.github/workflows/build-and-deploy.yml'
 
 jobs:
@@ -27,42 +26,28 @@ jobs:
         env:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "::set-output name=url::https://${GITHUB_ACTOR}:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          echo "url=https://${GITHUB_ACTOR}:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" >> $GITHUB_OUTPUT
         id: remote_repo
 
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.ref }}
 
-      - name: Setup Node
-        uses: actions/setup-node@v2
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v4
         with:
-          node-version: '12.x'
-
-      - name: Cache dependencies
-        uses: actions/cache@v2
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
+          node-version: '18.x'
+          cache: 'npm'
 
       - name: Get ISG state
         id: isg_state
         run: |
           if [ -f .isg ]; then
-            echo "::set-output name=rand::$(cat .isg)";
+            echo "rand=$(cat .isg)" >> $GITHUB_OUTPUT
           else
-            echo "::set-output name=rand::0";
+            echo "rand=0" >> $GITHUB_OUTPUT
           fi
-
-      - name: Cache output
-        continue-on-error: true
-        uses: actions/cache@v2
-        with:
-          path: .deploy/publish
-          key: ${{ hashFiles('.bundles.json') }}-${{ hashFiles('template/p*/**') }}-${{ hashFiles('content/**') }}-${{ steps.isg_state.outputs.rand }}
 
       - name: Install dependencies
         run: npm ci --only=production
@@ -82,14 +67,14 @@ jobs:
             BUILD_SLUG=$(node -p "require('./.ecomplus.cd.json').slug || false");
             if [ $BUILD_SLUG != false ]; then
               npm run build -- --prerender=index,$BUILD_SLUG --no-bundler;
-              echo "::set-output name=isg::2";
+              echo "isg=2" >> $GITHUB_OUTPUT
             else
               npm run build -- --prerender-limit=1000 --no-bundler;
-              echo "::set-output name=isg::1";
+              echo "isg=1" >> $GITHUB_OUTPUT
             fi
           else
             npm run build -- --prerender=index,app/index,search,404 --prerender-limit=300;
-            echo "::set-output name=isg::0";
+            echo "isg=0" >> $GITHUB_OUTPUT
           fi
         id: partial_build
 
@@ -104,14 +89,14 @@ jobs:
           else
             ISG_STATE=$(cat .isg);
           fi
-          echo "::set-output name=rand::$ISG_STATE";
+          echo "rand=$ISG_STATE" >> $GITHUB_OUTPUT
 
       - name: Config Git and check diff
         run: |
           git config --local user.email 'action@github.com'
           git config --local user.name 'GitHub Action'
           git add .isg .bundles.json content template
-          (git diff-index --quiet HEAD && echo "::set-output name=diff::0") || echo "::set-output name=diff::1"
+          (git diff-index --quiet HEAD && echo "diff=0" >> $GITHUB_OUTPUT) || echo "diff=1" >> $GITHUB_OUTPUT
         id: git_diff
 
       - name: Commit local file changes
@@ -126,60 +111,37 @@ jobs:
           REMOTE_REPO: ${{ steps.remote_repo.outputs.url }}
         run: git push "${REMOTE_REPO}" HEAD:master --follow-tags
 
-      - name: Clear cache if not ISG
-        if: steps.partial_build.outputs.isg == 0
-        continue-on-error: true
-        run: rm -rf .deploy
-
-      - name: Setup output directory to deploy
+      - name: Setup output directory for Netlify
         run: |
           mkdir -p .deploy/publish
-          cp -r dist/* .deploy/publish/
+          cp -r dist/* .deploy/publish/ || true
           rm -rf .deploy/publish/netlify.toml
-          cp -r .netlify/* .deploy/
+          cp -r .netlify/* .deploy/ || true
           cp -r template .deploy/functions/ssr/
           rm -rf .deploy/functions/ssr/template/public
           rm -rf .deploy/functions/ssr/template/scss
           cp -r content .deploy/functions/ssr/
           cp .bundles.json .deploy/functions/ssr/bundles.json
           mkdir -p .deploy/functions/ssr/template/pages/@ecomplus/storefront-template/template
-          cp -r node_modules/@ecomplus/widget-* .deploy/functions/ssr/template/pages/@ecomplus/ 2>/dev/null || :
-          cp -r node_modules/@ecomplus/storefront-template/template/pages .deploy/functions/ssr/template/pages/@ecomplus/storefront-template/template/ || :
+          cp -r node_modules/@ecomplus/widget-* .deploy/functions/ssr/template/pages/@ecomplus/ 2>/dev/null || true
+          cp -r node_modules/@ecomplus/storefront-template/template/pages .deploy/functions/ssr/template/pages/@ecomplus/storefront-template/template/ || true
 
-      - name: Clear functions directory
+      - name: Clear functions directory of node_modules
         continue-on-error: true
-        run: rm -rf .deploy/functions/ssr/template/pages/**/node_modules
+        run: find .deploy/functions -name node_modules -type d -exec rm -rf {} + 2>/dev/null || true
 
       - name: Zip Lambda functions
         run: |
           npx zip-it-and-ship-it .deploy/functions .deploy/functions-zip
           rm -rf .deploy/functions
 
-      - name: Reset dist to clear Git ref
-        if: steps.partial_build.outputs.isg == 0
-        continue-on-error: true
+      - name: Deploy to Netlify
+        uses: nwtgck/actions-netlify@v2.1
+        with:
+          publish-dir: './.deploy/publish'
+          production-branch: master
+          github-token: ${{ secrets.GITHUB_TOKEN }}
         env:
-          REMOTE_REPO: ${{ steps.remote_repo.outputs.url }}
-        run: |
-          git push "${REMOTE_REPO}" --delete dist;
-          git checkout --orphan dist
-          git rm -rf .
-          git commit --no-verify --allow-empty -m "Reset dist [skip ci]"
-          git push "${REMOTE_REPO}" HEAD:dist --force --follow-tags
-          git checkout master
-
-      - name: Push to branch dist to trigger deploy
-        uses: JamesIves/github-pages-deploy-action@releases/v3
-        with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BRANCH: dist
-          FOLDER: .deploy
-          CLEAN: true
-
-      - name: Cache output force update
-        if: steps.new_isg_state.outputs.rand != steps.isg_state.outputs.rand
-        continue-on-error: true
-        uses: actions/cache@v2
-        with:
-          path: .deploy/publish
-          key: ${{ hashFiles('.bundles.json') }}-${{ hashFiles('template/p*/**') }}-${{ hashFiles('content/**') }}-${{ steps.new_isg_state.outputs.rand }}
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        timeout-minutes: 15
