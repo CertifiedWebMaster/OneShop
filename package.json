@@ -1,26 +1,37 @@
 {
+  "name": "oneshop-storefront",
+  "version": "2.0.0",
+  "description": "PWA and JAMstack based e-commerce template for E-Com Plus stores",
+  "scripts": {
+    "serve": "storefront-tmpl-pack serve",
+    "build": "ECOMCLIENT_NOTIMEOUT=true storefront-tmpl-pack build",
+    "setup": "storefront-tmpl",
+    "vercel-build": "npm run build"
+  },
+  "dependencies": {
+    "@ecomplus/storefront-template": "^2.0.0-beta.123",
+    "@netlify/zip-it-and-ship-it": "^4.0.0",
+    "firebase-tools": "^9.10.2"
+  },
+  "devDependencies": {
+    "browser-sync": "^2.26.14"
+  },
   "browserslist": [
     "> 0.5%",
     "not dead",
     "not ie 11",
     "not ie_mob 11"
   ],
-  "private": true,
-  "name": "@ecomplus/storefront",
-  "version": "2.0.0-starter",
-  "description": "PWA and JAMstack based e-commerce template for E-Com Plus stores",
-  "main": "template/js/index.js",
-  "scripts": {
-    "serve": "storefront-tmpl-pack serve",
-    "build": "ECOMCLIENT_NOTIMEOUT=true storefront-tmpl-pack build",
-    "setup": "storefront-tmpl"
-  },
   "author": "E-Com Club <ti@e-com.club>",
   "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/ecomplus/storefront/issues"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CertifiedWebMaster/OneShop.git"
   },
-  "homepage": "https://developers.e-com.plus/storefront/",
+  "bugs": {
+    "url": "https://github.com/CertifiedWebMaster/OneShop/issues"
+  },
+  "homepage": "https://github.com/CertifiedWebMaster/OneShop#readme",
   "keywords": [
     "ecomplus",
     "storefront",
@@ -32,16 +43,5 @@
     "ecommerce-boilerplate",
     "store-theme"
   ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ecomplus/storefront-starter.git"
-  },
-  "dependencies": {
-    "@ecomplus/storefront-template": "^2.0.0-beta.123",
-    "@netlify/zip-it-and-ship-it": "^4.0.0",
-    "firebase-tools": "^9.10.2"
-  },
-  "devDependencies": {
-    "browser-sync": "^2.26.14"
-  }
+  "private": true
 }
